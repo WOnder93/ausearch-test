@@ -1,7 +1,8 @@
 /*
  * ausearch-test.c - ausearch testing utility
- * version: 0.5
- * Copyright 2014 Red Hat Inc., Durham, North Carolina.
+ * version: 0.6
+ * Intended audit version >= 2.8
+ * Copyright 2014,2017 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,6 +42,7 @@ struct nv_pair {
 
 static struct nv_pair options[] =
 {
+ {"arch", "--arch" }, // Old audit packages don't have this
  {"comm", "-c" },
  {"exit", "-e" },
  {"name", "-f" },
@@ -58,9 +60,11 @@ static struct nv_pair options[] =
  {"pid", "-p" },
  {"ppid", "-pp" },
  {"obj", "-o" },
+ {"img-ctx", "-o" },
  {"syscall", "-sc" },
  {"tcontext", "-se" },
  {"scontext", "-se" },
+ {"vm-ctx", "-su" },
  {"subj", "-su" },
  {"ses", "--session" },
  {"subj", "--subject" },
@@ -68,8 +72,9 @@ static struct nv_pair options[] =
  {"res", "--success" },
  {"result", "--success" },
  {"success", "--success" },
- {"tty", "-tm" },
+// {"tty", "-tm" },
  {"terminal", "-tm" },
+ {"addr", "-tm" },
  {"uid", "-ui" },
  {"euid", "-ue" },
  {"auid", "-ul" },
@@ -89,6 +94,17 @@ const char *opt_lookup(const char *f)
 		i++;
 	}
 	return options[i].option;
+}
+
+int opt_valid(const char *f)
+{
+	unsigned int i = 0;
+	while (options[i].field != NULL) {
+		if (strcasecmp(f, options[i].field) == 0)
+			return 1;
+		i++;
+	}
+	return 0;
 }
 
 int run_ausearch(auparse_state_t *au, char *line, const char *opt, 
@@ -112,10 +128,80 @@ int run_ausearch(auparse_state_t *au, char *line, const char *opt,
 	return 0;
 }
 
+int count = 0;
+int do_auparse_record_test(auparse_state_t *master_au)
+{
+	int first = 0, rc;
+	auparse_state_t *tmp_au;
+	tmp_au = auparse_init(AUSOURCE_FILE, LOG);
+	rc = auparse_first_field(master_au);
+	if (rc == 0) {
+		printf("Error seeking first field of master in auparse_record_test\n");
+		return 1;
+	}
+
+	do {
+		const char *field, *val;
+		if (tmp_au == NULL) {
+			printf("Error initializing tmp state\n");
+			return 2;
+		}
+		if (first == 0) {
+			if (ausearch_add_timestamp_item_ex(tmp_au, "=",
+					auparse_get_time(master_au),
+					auparse_get_milli(master_au),
+					auparse_get_serial(master_au),
+					AUSEARCH_RULE_CLEAR) < 0) {
+				printf("Error setting add_timestamp_item_ex\n");
+				return 3;
+			}
+			ausearch_set_stop(tmp_au, AUSEARCH_STOP_RECORD);
+			first = 1;
+			field = "timestamp";
+			val = "";
+		} else {
+			int type = auparse_get_type(master_au);
+			val = auparse_get_field_str(master_au);
+			field = auparse_get_field_name(master_au);
+			if (field && val && opt_valid(field)) {
+				// LOGIN events have 2 auids, can't search
+				// both simultaneously
+				if (type == AUDIT_LOGIN &&
+					(strcmp(field, "auid") == 0))
+					first++;
+
+				if (first > 2)
+					continue;
+
+				// skip the unknowns
+				if (strcmp(val, "?") == 0)
+					continue;
+				
+				if (ausearch_add_item(tmp_au, field, "=",
+						val, AUSEARCH_RULE_AND)) {
+					printf("Criteria error: %s\n", field);
+					return 2;
+				}
+			} else
+				continue;
+		} 
+		auparse_first_record(tmp_au);
+		if (ausearch_next_event(tmp_au) <= 0) {
+			printf("Auparse search error looking for %s = %s\n",
+					field, val);
+			printf("Full record being tested: %s\n",
+			auparse_get_record_text(master_au));
+			return 2;
+		}
+	} while (auparse_next_field(master_au));
+	auparse_destroy(tmp_au);
+	return 0;
+}
+
 /*
  * This tests one complete record
  */
-int do_record_test(auparse_state_t *au)
+int do_ausearch_record_test(auparse_state_t *au)
 {
 	char cmd[8192], *ptr;
 	int hn = 0, li = 0, ses = 0, first = 0;
@@ -155,8 +241,8 @@ int do_record_test(auparse_state_t *au)
 						auparse_get_record_text(au));
 					exit(1);
 				}
+				// skip the unknowns
 				if (strcmp(val, "?") == 0)
-					// skip the unknowns
 					continue;
 				if (strcmp(opt, "--success") == 0) {
 					// Correct the value
@@ -188,14 +274,20 @@ int do_record_test(auparse_state_t *au)
 				}
 				if (strcmp(field, "saddr") == 0) {
 					if (type == AUDIT_SOCKADDR) {
+						char *str;
 						// If unix socket skip the
 						// the identifier for its type
-						val = auparse_interpret_field(au);
-						if (strncmp(val, "local",
-								5) == 0)
-							val += 6;
-						else if (strncmp(val, "netlink",
-							7) == 0)
+						val=auparse_interpret_field(au);
+						str = strstr(val, "local");
+						if (str) {
+							val = str+11;
+							char *lptr =
+							    strrchr(val, ' ');
+							if (lptr)
+								*lptr = 0;
+							opt = "-f";
+						} else if (strstr(val,
+								"netlink"))
 						// skip netlink - not a real
 						// address
 							continue;
@@ -308,10 +400,15 @@ int main(int argc, char *argv[])
 	do {
 		auparse_first_record(au);
 		do {	// Do the test on the record
-			if (do_record_test(au)) {
+			if (do_ausearch_record_test(au)) {
 				problems++;
 				break; // --continue given, do next event
 			}
+			if (do_auparse_record_test(au)) {
+				problems++;
+				break;
+			}
+
 		} while (auparse_next_record(au) > 0);
 	} while (auparse_next_event(au) > 0);
 
