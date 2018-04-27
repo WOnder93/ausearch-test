@@ -1,0 +1,37 @@
+#!/bin/sh
+if [ $# -ne 2 -o "$1" = "--help" ] ; then
+	echo "aumerge LOG1 LOG2"
+	echo "Where LOG2 is the one that is appended to."
+	exit 1
+fi
+INLOG="$1"
+OUTLOG="$2"
+if [ ! -e $INLOG ] ; then
+	echo "Can't read $INLOG"
+	exit 1
+fi
+if [ ! -e $OUTLOG ] ; then
+	echo "Can't read $OUTLOG"
+	exit 1
+fi
+appended=0
+types=`ausearch -m 2>&1 | tr ' ' '\n'| egrep [A-Z] | egrep -v 'ALL|Argument|Valid|EOE|TRUSTED_APP|KERNEL_OTHER' | sort`
+#echo -e "$types\n\n"
+for t in $types
+do
+	ausearch -if $INLOG -m $t --just-one --raw 2>/dev/null 1>&2
+	if [ $? -eq 0 ] ; then
+		#echo "Found $t"
+		ausearch -if $OUTLOG -m $t --just-one --raw 2>/dev/null 1>&2
+		if [ $? -ne 0 ] ; then
+			ausearch -if $INLOG -m $t --just-one --raw 2>/dev/null >> $OUTLOG
+			echo "Appended $t to $OUTLOG"
+			appended=1
+		fi
+	fi
+done
+
+if [ $appended -eq 0 ] ; then
+	echo "There are no new records to merge"
+fi
+

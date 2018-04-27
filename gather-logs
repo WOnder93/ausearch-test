@@ -1,0 +1,18 @@
+#!/bin/sh
+types=`ausearch -m 2>&1 | tr ' ' '\n'| egrep [A-Z] | egrep -v 'ALL|Argument|Valid|EOE|TRUSTED_APP|KERNEL_OTHER' | sort`
+LOG="audit.log"
+if [ -e $LOG ] ; then
+	rm -f $LOG
+fi
+touch $LOG
+#echo -e "$types\n\n"
+for t in $types
+do
+	ausearch -m $t --just-one --raw 2>/dev/null >> $LOG
+	if [ $? -ne 0 ] ; then
+		echo "Can't find $t"
+	else
+		echo "Found $t"
+	fi
+done
+
