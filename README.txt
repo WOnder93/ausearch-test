@@ -1,6 +1,6 @@
-To use the ausearch test suite run make. This will compile the
-ausearch-test program. The next thing is you will want to have some
-logs to test.
+To use the ausearch test suite you need bash and audit userspace version
+2.8 or above. To build the test suite just run make. This will compile
+the ausearch-test program. Next, you will want to have some logs to test.
 
 ausearch --start today --raw > test.log
 
