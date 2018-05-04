@@ -1,9 +1,20 @@
 # `ausearch` testing tools
 
-To use the `ausearch` test suite you need `bash` and audit userspace version 2.8 or above. To build the test suite just run `make`. This will compile the `./ausearch-test` program. Next, you will want to have some logs to test:
+This repository contains a set of tools intended for testing the `ausearch` program, which is part of the [audit-userspace](https://github.com/linux-audit/audit-userspace/) collection.
+
+## Dependencies
+To use `ausearch-test` you need at least `gcc`, `bash` and audit userspace binaries and libraries of version 2.8 or above. On Fedora, you can install these by running:
+
+```bash
+dnf install gcc bash audit audit-libs-devel
+```
+
+## Preparing the test suite
+To build the test suite just run `make`. This will compile the `./ausearch-test` program. Next, you will want to have some logs to test:
 
     ausearch --start today --raw > test.log
 
+## Running the test suite.
 The program will default to testing `audit.log` in the current directory, but you can also pass it a log name to test:
 
     ./ausearch-test test.log
@@ -20,6 +31,7 @@ If you are creating a new event and it fails, then this will tell you that `ause
 
 The default behavior is for the test to stop on the first failure. You may also pass `--continue` as a command line option to examine all events in the log.
 
+## Auxiliary scripts
 The ausearch test suite also comes with a couple of scripts to help curate a collection of events.
 
 * `gather-logs`
