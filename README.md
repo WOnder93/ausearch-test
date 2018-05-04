@@ -3,7 +3,7 @@
 This repository contains a set of tools intended for testing the `ausearch` program, which is part of the [audit-userspace](https://github.com/linux-audit/audit-userspace/) collection.
 
 ## Dependencies
-To use `ausearch-test` you need at least `gcc`, `bash` and audit userspace binaries and libraries of version 2.8 or above. On Fedora, you can install these by running:
+To use `ausearch-test` you need at least `gcc`, `bash` and audit userspace binaries and libraries of version 2.8 or above. On Fedora, you can install these by running (on RHEL just replace `dnf` with `yum`):
 
 ```bash
 dnf install gcc bash audit audit-libs-devel
