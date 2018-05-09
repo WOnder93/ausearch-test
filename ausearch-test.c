@@ -31,8 +31,8 @@
 #include <unistd.h>
 #include <auparse.h>
 
-static char *AUSEARCH = NULL;
-static char *LOG = NULL;
+static const char *AUSEARCH = NULL;
+static const char *LOG = NULL;
 static int continue_on_error = 0;
 
 struct nv_pair {
@@ -128,12 +128,11 @@ int run_ausearch(auparse_state_t *au, char *line, const char *opt,
 	return 0;
 }
 
-int count = 0;
 int do_auparse_record_test(auparse_state_t *master_au)
 {
 	int first = 0, rc;
-	auparse_state_t *tmp_au;
-	tmp_au = auparse_init(AUSOURCE_FILE, LOG);
+	auparse_state_t *tmp_au = auparse_init(AUSOURCE_FILE, LOG);
+
 	rc = auparse_first_field(master_au);
 	if (rc == 0) {
 		printf("Error seeking first field of master in auparse_record_test\n");
@@ -372,13 +371,12 @@ int main(int argc, char *argv[])
 			printf("ausearch-test [path to different ausearch|log] [--continue]\n");
 			return 0;
 		}
-//printf("opt=%d, argv[opt]=%s\n", opt, argv[opt]);
 		if (strcmp(argv[opt], "--continue") == 0)
 			continue_on_error = 1;
 		else if (access(argv[opt], X_OK) == 0)
-			AUSEARCH = strdup(argv[opt]);
+			AUSEARCH = argv[opt];
 		else if (access(argv[opt], R_OK) == 0) {
-			LOG = strdup(argv[opt]);
+			LOG = argv[opt];
 		} else {
 			printf("Can't find replacement for ausearch: %s\n", argv[opt]);
 			return 1;
@@ -386,9 +384,9 @@ int main(int argc, char *argv[])
 		opt++;
 	}
 	if (AUSEARCH == NULL)
-		AUSEARCH = strdup("ausearch");
+		AUSEARCH = "ausearch";
 	if (LOG == NULL)
-		LOG = strdup("./audit.log");
+		LOG = "./audit.log";
 
 	au = auparse_init(AUSOURCE_FILE, LOG);
 	if (au == NULL) {
