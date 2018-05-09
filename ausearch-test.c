@@ -416,6 +416,6 @@ int main(int argc, char *argv[])
 	else
 		printf("Done - no problems detected\n");
 
-	return 0;
+	return problems ? 1 : 0;
 }
 
