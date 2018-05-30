@@ -2,6 +2,12 @@
 
 This repository contains a set of tools intended for testing the `ausearch` program, which is part of the [audit-userspace](https://github.com/linux-audit/audit-userspace/) collection.
 
+The tools currently test the following:
+* whether the searching functionality in `libauparse` correctly finds records based on search criteria,
+* whether `ausearch` correctly finds records based on search criteria.
+
+The tools use the `libauparse` record parser as a reference.
+
 ## Dependencies
 To use `ausearch-test` you need at least `gcc`, `bash` and audit userspace binaries and libraries of version 2.8 or above. On Fedora, you can install these by running (on RHEL just replace `dnf` with `yum`):
 
