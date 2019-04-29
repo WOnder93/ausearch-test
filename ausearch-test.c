@@ -48,7 +48,6 @@ static struct nv_pair options[] =
  {"name", "-f" },
  {"cwd", "-f" }, // INFO: old ausearch will fail this, comment out accordingly
  {"path", "-f" },
- {"saddr", "-f" },  // if unix socket
  {"gid", "--gid" },
  {"egid", "-ge" },
  {"hostname", "-hn" },
